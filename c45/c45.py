@@ -1,4 +1,6 @@
 import math
+import random ## added
+trainRate = .8
 class C45:
 
 	"""Creates a decision tree with C4.5 algorithm"""
@@ -6,6 +8,7 @@ class C45:
 		self.filePathToData = pathToData
 		self.filePathToNames = pathToNames
 		self.data = []
+		self.testdata = [] ## added
 		self.classes = []
 		self.numAttributes = -1 
 		self.attrValues = {}
@@ -26,30 +29,76 @@ class C45:
 		with open(self.filePathToData, "r") as file:
 			for line in file:
 				row = [x.strip() for x in line.split(",")]
+				## Binary classification
+				# if row[-1] != '0' and row[-1] != '1':
+				#	 row[-1] = '1'
 				if row != [] or row != [""]:
-					self.data.append(row)
+					if random.random() < trainRate:
+						self.data.append(row)
+					else:
+						self.testdata.append(row)
+		# self.printEverything()
+
+	def preprocessTestData(self):
+		flag = 0
+		# print self.classes
+		# print type(self.classes)
+		for index,row in enumerate(self.testdata):
+			if (self.classes).__contains__(row[0]):
+				# print "LOL"
+				flag = 1
+				if flag == 1:
+					val = row[0]
+					# print row[0]
+					self.testdata[index].remove(row[0])
+					self.testdata[index].append(val)
+					flag = 0
 
 	def preprocessData(self):
 		for index,row in enumerate(self.data):
 			for attr_index in range(self.numAttributes):
 				if(not self.isAttrDiscrete(self.attributes[attr_index])):
 					self.data[index][attr_index] = float(self.data[index][attr_index])
+		flag = 0
+		# print self.classes
+		# print type(self.classes)
+		for index,row in enumerate(self.data):
+			if (self.classes).__contains__(row[0]):
+				# print "LOL"
+				flag = 1
+				if flag == 1:
+					data = row[0]
+					# print row[0]
+					self.data[index].remove(row[0])
+					self.data[index].append(data)
+					flag = 0
+		# print self.data
+		self.preprocessTestData()
+
+		
 
 	def printTree(self):
 		self.printNode(self.tree)
 
 	def printNode(self, node, indent=""):
 		if not node.isLeaf:
+			# print "Here"
 			if node.threshold is None:
 				#discrete
+				# print ("DISCRETE")
 				for index,child in enumerate(node.children):
-					if child.isLeaf:
-						print(indent + node.label + " = " + attributes[index] + " : " + child.label)
+					if child.isLeaf:  ## str(a[index]) was attributes[index]
+						a = []
+						a = self.attrValues.get(node.label)
+						print(indent + node.label + " = " + str(a[index]) + " : " + child.label) 
 					else:
-						print(indent + node.label + " = " + attributes[index] + " : ")
+						a = []
+						a = self.attrValues.get(node.label)
+						print(indent + node.label + " = " + str(a[index])  + " : ")
 						self.printNode(child, indent + "	")
 			else:
 				#numerical
+				# print ("NUMERICAL")
 				leftChild = node.children[0]
 				rightChild = node.children[1]
 				if leftChild.isLeaf:
@@ -65,15 +114,13 @@ class C45:
 					self.printNode(rightChild , indent + "	")
 
 
-
 	def generateTree(self):
 		self.tree = self.recursiveGenerateTree(self.data, self.attributes)
 
 	def recursiveGenerateTree(self, curData, curAttributes):
 		allSame = self.allSameClass(curData)
-
 		if len(curData) == 0:
-			#Fail
+			## None found was Fail
 			return Node(True, "Fail", None)
 		elif allSame is not False:
 			#return a node with that class
@@ -100,10 +147,13 @@ class C45:
 
 
 	def allSameClass(self, data):
-		for row in data:
-			if row[-1] != data[0][-1]:
-				return False
-		return data[0][-1]
+		if len(data) == 0:  ## added to avoid empy data error
+			return False
+		else:
+			for row in data:
+				if row[-1] != data[0][-1]:
+					return False
+			return data[0][-1]
 
 	def isAttrDiscrete(self, attribute):
 		if attribute not in self.attributes:
@@ -112,6 +162,21 @@ class C45:
 			return False
 		else:
 			return True
+
+	def gain(self,unionSet, subsets):
+		#input : data and disjoint subsets of it
+		#output : information gain
+		S = len(unionSet)
+		#calculate impurity before split
+		impurityBeforeSplit = self.entropy(unionSet)
+		#calculate impurity after split
+		weights = [len(subset)/S for subset in subsets]
+		impurityAfterSplit = 0
+		for i in range(len(subsets)):
+			impurityAfterSplit += weights[i]*self.entropy(subsets[i])
+		#calculate total gain
+		totalGain = impurityBeforeSplit - impurityAfterSplit
+		return totalGain
 
 	def splitAttribute(self, curData, curAttributes):
 		splitted = []
@@ -129,10 +194,10 @@ class C45:
 				subsets = [[] for a in valuesForAttribute]
 				for row in curData:
 					for index in range(len(valuesForAttribute)):
-						if row[i] == valuesForAttribute[index]:
+						if row[indexOfAttribute] == valuesForAttribute[index]:   ## indexOfAttribute was i
 							subsets[index].append(row)
 							break
-				e = gain(curData, subsets)
+				e = self.gain(curData, subsets) ## self.gain was gain
 				if e > maxEnt:
 					maxEnt = e
 					splitted = subsets
@@ -161,21 +226,6 @@ class C45:
 							best_threshold = threshold
 		return (best_attribute,best_threshold,splitted)
 
-	def gain(self,unionSet, subsets):
-		#input : data and disjoint subsets of it
-		#output : information gain
-		S = len(unionSet)
-		#calculate impurity before split
-		impurityBeforeSplit = self.entropy(unionSet)
-		#calculate impurity after split
-		weights = [len(subset)/S for subset in subsets]
-		impurityAfterSplit = 0
-		for i in range(len(subsets)):
-			impurityAfterSplit += weights[i]*self.entropy(subsets[i])
-		#calculate total gain
-		totalGain = impurityBeforeSplit - impurityAfterSplit
-		return totalGain
-
 	def entropy(self, dataSet):
 		S = len(dataSet)
 		if S == 0:
@@ -197,11 +247,125 @@ class C45:
 		else:
 			return math.log(x,2)
 
+	def getNode(self):
+		return self.tree
+	
+	def getTestData(self):
+		return self.testdata
+
+	def testNode(self):
+		print(self.attributes)
+		success = 0
+		for row in self.testdata:
+			success += self.testRow(row)
+		print "Success : ", success
+		print "Total : ", len(self.testdata)
+		print "Ratio : ", float(success)/len(self.testdata)
+
+	def testDiscrete(self,row):
+		node = self.tree
+		for index,value in enumerate(row):
+			# print "2"
+			if not node.isLeaf:
+				# print "3"
+				if list(self.attrValues[node.label]).__contains__(value):
+					# print "4"
+					val = list(self.attrValues[node.label]).index(value)
+					# print val,index
+					# print node.label
+					# print self.attributes[index]
+					if node.label == self.attributes[index]:
+						# print "5"
+						node = node.children[val]
+					else:
+						# print "6"
+						print "Failure"
+						return 0
+				else:
+					# print "7"
+					continue
+			else:
+				# print "8"
+				print node.label
+				if row[-1] == node.label:
+					# print "9"
+					print "Success"
+					return 1
+				else:
+					# print "10"
+					print "Failure"
+					return 0
+
+	# def nodeRecurse(self,row,i,node):
+	# 	attrIndex = val = list(self.attrValues[node.label]).index(i)
+	# 	if node.isLeaf:
+	# 		if row[-1] == node.label:
+	# 			return 1
+	# 		else:
+	# 			return 0
+	# 	elif node.label == self.attributes[i] and node.children.
+	# 		node = node.children[attrIndex]
+	# 	return 0
+
+	# def testDiscrete1(self,row):
+	# 	node = self.tree
+	# 	return nodeRecurse(row,0,node)
+	def printMyNODE(self,node,indent):
+		if not node.isLeaf:
+			print indent,"[", node.label, ",",node.threshold,",",len(node.children),"]"
+			for child in node.children:
+				# print "IN FOR"
+				self.printMyNODE(child,"    " + indent)
+		else:
+			print indent,"[", node.label, ",",node.threshold,",",len(node.children),"]"
+
+
+
+	def testNumerical(self,row,node):
+		# self.printMyNODE(node,"")
+		if not node.isLeaf:
+			aI = self.attributes.index(node.label)
+			# print node.label, node.threshold, row[aI]
+			if row[aI] >= node.threshold:
+				node = node.children[0]
+				return self.testNumerical(row,node)
+			else:
+				node = node.children[1]
+				return self.testNumerical(row,node)
+		else:
+			print node.label
+			if node.label == row[-1]:
+				print "Success"
+				return 1
+			else:
+				print "Failure"
+				return 0
+
+
+
+		
+		return 0
+
+	def testRow(self,row):
+		node = self.tree
+		print row
+		if node.threshold is None:
+			#DISCRETE
+			# print "1"
+			return self.testDiscrete(row)
+
+		else:
+			# print "11"
+			#NUMERICAL
+			return self.testNumerical(row,node)
+		# print "20"
+		
+		print "Failure"
+		return 0
+
 class Node:
 	def __init__(self,isLeaf, label, threshold):
 		self.label = label
 		self.threshold = threshold
 		self.isLeaf = isLeaf
 		self.children = []
-
-
