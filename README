@@ -1,4 +1,14 @@
 Implementation of c4.5
+Data format needed :
+names file : 
+classes should be mentioned in first line. 
+attributes should be mentioned one per line, with type of data separated with a colon, eg.
+	attrbute : (d1,d2,d3)
+OR	
+	attribute : continuous
+
+data file : 
+class should be the first OR last attribute.
 
 How to run : 
 
