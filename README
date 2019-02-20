@@ -30,7 +30,9 @@ sepal length > 2.45 : Iris-virginica
 
 The code creates the tree based on 80% of random rows selected from data. (training)
 
-The testing can be done on the remaining 20% of the data by uncommenting line 17 of main.py 
+The testing is done on the remaining 20% of the data by a function call on line 16 of main.py 
+
+K Cross Validation has been implemented, it is called fromline 18 of main.py
 
 (at 3:38 AM 19 Feb, Testing only works for discrete data. Figuring out how to test for continuous data.)
 (UPDATE 4:26 AM 19 Feb, Testing works on continuous data as well.)
