@@ -9,6 +9,7 @@ class C45:
 		self.filePathToNames = pathToNames
 		self.data = []
 		self.testdata = [] ## added
+		self.alldata = []
 		self.classes = []
 		self.numAttributes = -1 
 		self.attrValues = {}
@@ -33,11 +34,24 @@ class C45:
 				# if row[-1] != '0' and row[-1] != '1':
 				#	 row[-1] = '1'
 				if row != [] or row != [""]:
+					self.alldata.append(row)
 					if random.random() < trainRate:
 						self.data.append(row)
 					else:
 						self.testdata.append(row)
-		# self.printEverything()
+		# self.printEverything()\
+
+	def preprocessAllData(self):
+		flag = 0
+		for index,row in enumerate(self.alldata):
+			if (self.classes).__contains__(row[0]):
+				flag = 1
+			if flag == 1:
+				val = row[0]
+				# print row[0]
+				self.alldata[index].remove(row[0])
+				self.alldata[index].append(val)
+				flag = 0
 
 	def preprocessTestData(self):
 		flag = 0
@@ -45,14 +59,14 @@ class C45:
 		# print type(self.classes)
 		for index,row in enumerate(self.testdata):
 			if (self.classes).__contains__(row[0]):
-				# print "LOL"
 				flag = 1
-				if flag == 1:
-					val = row[0]
-					# print row[0]
-					self.testdata[index].remove(row[0])
-					self.testdata[index].append(val)
-					flag = 0
+			if flag == 1:
+				val = row[0]
+				# print row[0]
+				self.testdata[index].remove(row[0])
+				self.testdata[index].append(val)
+				flag = 0
+		self.preprocessAllData()
 
 	def preprocessData(self):
 		for index,row in enumerate(self.data):
@@ -253,14 +267,16 @@ class C45:
 	def getTestData(self):
 		return self.testdata
 
-	def testNode(self):
-		print(self.attributes)
+	def testNode(self,fnData = None):
+		# print(self.attributes)
 		success = 0
-		for row in self.testdata:
+		if fnData is None:
+			fnData = self.testdata
+		for row in fnData:
 			success += self.testRow(row)
 		print "Success : ", success
-		print "Total : ", len(self.testdata)
-		print "Ratio : ", float(success)/len(self.testdata)
+		print "Total : ", len(fnData)
+		print "Ratio : ", float(success)/len(fnData)
 
 	def testDiscrete(self,row):
 		node = self.tree
@@ -279,22 +295,23 @@ class C45:
 						node = node.children[val]
 					else:
 						# print "6"
-						print "Failure"
+						# print "Failure"
 						return 0
 				else:
 					# print "7"
 					continue
 			else:
 				# print "8"
-				print node.label
+				# print node.label
 				if row[-1] == node.label:
 					# print "9"
-					print "Success"
+					# print "Success"
 					return 1
 				else:
 					# print "10"
-					print "Failure"
+					# print "Failure"
 					return 0
+		return 0
 
 	# def nodeRecurse(self,row,i,node):
 	# 	attrIndex = val = list(self.attrValues[node.label]).index(i)
@@ -333,12 +350,12 @@ class C45:
 				node = node.children[1]
 				return self.testNumerical(row,node)
 		else:
-			print node.label
+			# print node.label
 			if node.label == row[-1]:
-				print "Success"
+				# print "Success"
 				return 1
 			else:
-				print "Failure"
+				# print "Failure"
 				return 0
 
 
@@ -348,7 +365,7 @@ class C45:
 
 	def testRow(self,row):
 		node = self.tree
-		print row
+		# print row
 		if node.threshold is None:
 			#DISCRETE
 			# print "1"
@@ -362,6 +379,36 @@ class C45:
 		
 		print "Failure"
 		return 0
+	
+	def kCross(self,n):
+		total = len(self.alldata)
+		# print total
+		testCount = float(total)/n
+		# print testCount
+		broken = []
+		testSection = []
+		trainingData = []
+		for i in range(0,n):
+			# print (i)*testCount , (i+1)*testCount
+			start = int((i)*testCount)
+			end = int((i+1)*testCount)
+			# print len(self.alldata[start:end])
+			broken.append(self.alldata[start:end])
+		for i in range(0,n):
+			trainingData = []
+			testSection = broken[i]
+			for j in range(0,n):
+				if j != i:
+					for row in broken[i]:
+						trainingData.append(row)
+			self.recursiveGenerateTree(trainingData,self.attributes)
+			# print len(trainingData)
+			# for row in testSection:
+			self.testNode(testSection)
+			print "\n"
+			# print len(testSection)
+		
+
 
 class Node:
 	def __init__(self,isLeaf, label, threshold):
